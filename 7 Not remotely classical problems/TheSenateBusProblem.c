@@ -96,6 +96,7 @@ int main(void){
         pthread_create(&riders_t[i], NULL, riders, NULL);
     }
 
+    //wait forever for bus thread to end
     pthread_join(bus_t,NULL);
     return 0;
 }
