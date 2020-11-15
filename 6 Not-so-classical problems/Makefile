@@ -7,7 +7,7 @@ CFLAGS  = -Wall -Werror -D_POSIX_THREAD_SEMANTICS
 LDFLAGS = -pthread
 
 # the build target executable:
-TARGET = TheUnisexBathroomProblem
+TARGET = TheSearchInsertDeleteProblem
 
 all: $(TARGET)
 
