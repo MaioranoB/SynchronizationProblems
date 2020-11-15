@@ -9,37 +9,48 @@ If the bus arrives when there are no riders, it should depart() immediately.
 */
 #include <stdio.h>
 #include <pthread.h>
-#include<unistd.h> //for sleep func
+#include<unistd.h>
+#include <stdlib.h>
+#include<time.h> 
 
-#define CAPACITY 50
+#define CAPACITY 50 //capacity of the bus
 #define MIN(a,b) (((a)<(b)) ? (a):(b))
 
-//DEFAULT VALUES:
-int ridersWaiting = 0;
-int ridersNumber = 30;
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+int ridersWaiting = 0; //keeps track of how many riders are waiting in the boarding area
+int ridersNumber = 80; //number of riders
 
-pthread_cond_t busArrived = PTHREAD_COND_INITIALIZER;
-pthread_cond_t boarded = PTHREAD_COND_INITIALIZER;
-/*
-mutex protects ridersWaiting, which keeps track of how many riders are waiting;
-multiplex makes sure there are no more than 50 riders in the boarding area.
-Riders wait on bus, which gets signaled when the bus arrives.
-The bus waits on allAboard, which gets signaled by the last student to board.
-*/
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; //mutex protects ridersWaiting (prevent concurrent access)
+pthread_cond_t busArrived = PTHREAD_COND_INITIALIZER; //busArrived signals when the bus has arrived
+pthread_cond_t boarded = PTHREAD_COND_INITIALIZER; //boarded signals that a rider has boarded
 
-//http://greenteapress.com/semaphores/LittleBookOfSemaphores.pdf
+void sleepRandom(int min, int max){
+    sleep((rand()%(max-min+1))+min);
+}
 
-void depart(int ridersNum){
-    printf("\t\tBUS DEPART WITH %d RIDERS\n",ridersNum);
+void depart(int departNum){
+    if (departNum == 0){
+        printf("\t\tBUS DEPART IMMEDIATELY\n");
+    }
+    else{
+        printf("\t\tBUS DEPART WITH %d RIDERS\n",departNum);
+    }
 }
 void *bus(){
     while(1){
         //When the bus arrives, it gets mutex, which prevents late arrivals from entering the boarding area
         pthread_mutex_lock(&mutex);
+
+        //Prevents more than the capacity of the bus from boarding
         int n = MIN(ridersWaiting,CAPACITY);
-        printf("\tTHE BUS ARRIVED, %d RIDERS IN LINE WLL ENTER\n",n);
+    
+        if (n == 0){
+            printf("\tTHE BUS ARRIVED. NO RIDERS IN THE BOARDING AREA\n");
+        }
+        else{
+            printf("\tTHE BUS ARRIVED, %d RIDERS IN LINE WLL ENTER\n",n);
+        }
         
+        //The loop signals each rider in turn and waits for him to board
         for (int i=0; i<n; i++){
             pthread_cond_signal(&busArrived);
             pthread_cond_wait(&boarded,&mutex);
@@ -47,33 +58,35 @@ void *bus(){
 
         depart(n);
         pthread_mutex_unlock(&mutex);
-        sleep(2); //melhorar esses valores do sleep e ver se tem alguma outra func pra isso
+        sleepRandom(3,5); //next bus in some random seconds
     }
     return NULL;
 }
-
 
 void board(){
     printf("Rider board.\n");
     ridersWaiting --;
     pthread_cond_signal(&boarded);
 }
-
 void *riders(){
     while(1){
+        sleepRandom(2,10); //riders arrives at different times
         pthread_mutex_lock(&mutex);
-        ridersWaiting ++;
-        printf("Rider arrived. Waiting for the bus. Total waiting = %d\n",ridersWaiting);
+        
+        //Riders wait on bus until the bus arrives
+        printf("Rider arrived. Waiting for the bus. Total waiting = %d\n", ++ridersWaiting);
         pthread_cond_wait(&busArrived,&mutex);
 
         board();
         pthread_mutex_unlock(&mutex);
-        sleep(1);
     }
     return NULL;
 }
 
 int main(void){
+    printf("Capacity of the bus: %d\n", CAPACITY);
+    printf("Number of riders: %d\n\n", ridersNumber);
+    srand(time(0)); //current time as seed
 
     pthread_t bus_t;
     pthread_create(&bus_t, NULL, bus, NULL);
@@ -84,6 +97,5 @@ int main(void){
     }
 
     pthread_join(bus_t,NULL);
-    
     return 0;
 }
