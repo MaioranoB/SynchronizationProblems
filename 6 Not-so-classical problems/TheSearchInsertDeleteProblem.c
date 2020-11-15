@@ -8,14 +8,14 @@ At most one deleter process can access the list at a time, and deletion must als
 */
 #include <stdio.h>
 #include <pthread.h>
-#include<unistd.h>
+#include <unistd.h>
 
 //DEFAULT VALUES:
 int searchersNum = 5;
 int insertersNum = 3;
 int deletersNum  = 2;
 
-pthread_rwlock_t ReaderWriterLOCK = PTHREAD_RWLOCK_INITIALIZER; 
+pthread_rwlock_t ReaderWriterLOCK = PTHREAD_RWLOCK_INITIALIZER; //reader-writer lock variable handling
 
 void *searchers(){
      while(1){
@@ -69,7 +69,8 @@ int main(void){
      for(int i = 0; i < deletersNum; i++){
           pthread_create(&deleters_t[i], NULL, deleters, NULL);
      }
-     
+
+     //will wait forever for thread searchers_t[0] to end
      pthread_join(searchers_t[0],NULL);
      return 0;
 }
